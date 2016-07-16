@@ -1,6 +1,6 @@
 'use strict';
 
-require('dotenv').load();
+const dotenv        = require('dotenv');
 const PORT          = process.env.PORT || 3001;
 const MONGO_URL     = process.env.MONGODB_URI || "mongodb://localhost/FullStack_CHANGE_ME!!!!!!!!!!!!!!!!!!!!";
 
