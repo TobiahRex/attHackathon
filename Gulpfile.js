@@ -1,41 +1,72 @@
-"use strict";
-const gulp        = require("gulp");
-const concat      = require("gulp-concat");
-const sass        = require("gulp-sass");
-const sourcemaps  = require("gulp-sourcemaps");
-const plumber     = require("gulp-plumber");
-const nodemon     = require("gulp-nodemon");
+'use strict';
 
-gulp.task("default",    ["build", "watch", "serve"]);
-gulp.task("watch",      ["watch.js", "watch.css", "watch.html"]);
-gulp.task("build",      ["js", "css", "html"]);
-gulp.task("watch.js",   ()=>{
-  return gulp.watch("./app/js/**/*.js", ["js"])
-});
-gulp.task("watch.css",  ()=>{
-  return gulp.watch("./app/css/**", ["css"]);
-});
-gulp.task("watch.html", ()=>{
-  return gulp.watch("./app/html/**", ["html"]);
-})
-gulp.task("serve",      ()=>{
-  nodemon({
-    ignore : ["app", "public", "Gulpfile.js"]
-  });
-});
-gulp.task("js",         ()=>{
-  return gulp.src("./app/js/**/*.js")
+const gulp       = require('gulp');
+const concat     = require('gulp-concat');
+const del        = require('del');
+const babel      = require('gulp-babel');
+const ngAnnotate = require('gulp-ng-annotate');
+const uglify     = require('gulp-uglify');
+const sourcemaps = require('gulp-sourcemaps');
+const inject     = require('gulp-inject');
+const nodemon    = require('gulp-nodemon');
+const plumber    = require('gulp-plumber');
+const mbf        = require('main-bower-files');
+
+let paths = {
+  js : {
+    input : ['app/js/**/*.js','app/css/assets/*.js'],
+    output: 'public/js'
+  },
+  css : {
+    input : 'app/css/**/*.css',
+    output: 'public/css'
+  },
+  html : {
+    input : 'app/html/**/*.html',
+    output: 'public/html'
+  }
+}
+
+gulp.task('default',  ['build', 'watch', 'index', 'serve']);
+gulp.task('build',    ['html', 'js', 'css']);
+gulp.task('watch',    ['watch:js', 'watch:html', 'watch:css']);
+gulp.task('serve', ()=> nodemon({ignore : ['./app' ,'./public']}));
+
+gulp.task('js',   ['clean:js'],   ()=>{
+  return gulp.src(paths.js.input)
   .pipe(plumber())
   .pipe(sourcemaps.init())
-  .pipe(concat("bundle.js"))
-  .pipe(gulp.dest("./public/js"))
+  .pipe(babel({presets : 'es2015'}))
+  .pipe(concat('bundle.js'))
+  .pipe(ngAnnotate())
+  .pipe(uglify())
+  .pipe(sourcemaps.write())
+  .pipe(gulp.dest(paths.js.output))
 });
-gulp.task("css",        ()=>{
-  return gulp.src("./app/css/**/")
-  .pipe(sass().on("error", sass.logError))
-  .pipe(gulp.dest("./public/css"));
+gulp.task('html', ['clean:html'], ()=>{
+  return gulp.src(paths.html.input)
+  .pipe(gulp.dest(paths.html.output))
 });
-gulp.task("html",       ()=>{
-  return gulp.src("./app/html/**/")
-  .pipe(gulp.dest("./public/html"));
+gulp.task('css',  ['clean:css'],  ()=>{
+  return gulp.src(paths.css.input)
+  .pipe(plumber())
+  .pipe(gulp.dest(paths.css.output))
 });
+
+gulp.task('watch:js',   ()=> gulp.watch(paths.js.input, ['js']));
+gulp.task('watch:html', ()=> gulp.watch(paths.html.input, ['html']));
+gulp.task('watch:css',  ()=> gulp.watch(paths.css.input, ['css']));
+
+gulp.task('clean:js',   ()=> del([paths.js.output]));
+gulp.task('clean:html', ()=> del([paths.html.output]));
+gulp.task('clean:css',  ()=> del([paths.css.output]));
+
+console.log('mbf: ', mbf('/public/**/*.js'));
+
+gulp.task('index', ()=>{
+  return gulp.src('app/html/index.html')
+  .pipe(inject(gulp.src(mbf(), {read : false}), {name: 'bower.js'}))
+  .pipe(inject(gulp.src(mbf(), {read : false}), {name: 'bower.css'}))
+  .pipe(inject(gulp.src(['./public/js/bundle.js', '/css/assets/bootswatch-cyborg.min.css', '/css/assets/animate.css', '/css/main.css'], {read : false})))
+  .pipe(gulp.dest('./public/index.html'));
+})
