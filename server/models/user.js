@@ -1,6 +1,5 @@
 'use strict';
 
-require('dotenv').load();
 const mongoose    = require('mongoose');
 const moment      = require('moment');
 const JWT         = require('jsonwebtoken');

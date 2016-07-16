@@ -46,6 +46,7 @@ angular.module('fullStackTemplate')
           $scope.go('/');
         })
         .catch(_=> $state.go('/'))
+      }
     }
   })
   .state('forgot', {
